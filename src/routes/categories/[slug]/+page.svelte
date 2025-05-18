@@ -1,13 +1,12 @@
 <script lang="ts">
-  let {data} = $props();
-  console.log(">>FROM CLIENT",data)
+let {data} = $props();
 import ProductCard from '$lib/components/plp/ProductCard.svelte';
 import { getCartStore } from '$lib/stores/cartStore.svelte';
 import { getCartToastStore } from '$lib/stores/cartToastStore.svelte';
 import { addToCartApi } from '$lib/services/api-services/cart/cartApi';
 let showMobileFilters = $state(false);
 import { goto } from '$app/navigation';
-import { page } from '$app/stores';
+import { page } from '$app/state';
 import FilterSidebar from '$lib/components/plp/filters/FilterSidebar.svelte';
 import MobileFilterButton from '$lib/components/plp/filters/MobileFilterButton.svelte';
 import Breadcrumbs from '$lib/components/Breadcrumbs.svelte';
@@ -16,6 +15,7 @@ import { getWishlistStore } from '$lib/stores/wishlistStore.svelte';
 import { getProductsByCollection, getCollectionFacets } from '$lib/services/api-services/plp/productListingApi';
 import type { Product, Collection, FacetValue, FacetCount, ProductSearchResult } from '$lib/services/api-services/plp/types';
 import { toggleWishlist } from '$lib/effects/wishlistEffects';
+import { onMount } from 'svelte';
 
 // Product card handlers
 const cart = getCartStore();
@@ -43,16 +43,22 @@ let facets = $state<Record<string, { facetValue: FacetValue; count: number }[]>>
 let isLoading = $state(false);
 let error = $state<string|null>(data?.error ?? null);
 let allFacets = $state<Record<string, { facetValue: FacetValue; count: number }[]>>(data?.allFacets ?? {});
-console.log('[SSR] data?.allFacets:', data?.allFacets);
 let currentPage = $state(1);
 let totalPages = $state(data?.totalPages ?? 1);
-const ITEMS_PER_PAGE = 6;
+let isMounted = false;
 
-let collectionSlug = $derived(() => $page.params.slug);
+$effect(async () => {  
+  if (!isMounted && page.params) {        
+        isMounted = true;    
+        return;
+		}
 
-// Fetch all possible facet values for the collection (unfiltered)
-$effect(async () => {
-  const slug = collectionSlug();
+  products = data?.products ?? [];
+  facets = data?.allFacets ?? {};
+  allFacets = data?.allFacets ?? {};
+
+
+  const slug = collectionSlug;
   if (!slug) return;
   const allFacetValues = await getCollectionFacets(slug);
   console.log('[CLIENT] allFacetValues:', allFacetValues);
@@ -67,17 +73,32 @@ $effect(async () => {
       count: 0 // Will be replaced by filtered count if present
     });
   });
-  console.log('[CLIENT] grouped:', grouped);
-  allFacets = grouped;
-  console.log('[CLIENT] allFacets after assignment:', allFacets);
+  allFacets = grouped;   
+ 
 });
-let currentFacetValueIds = $derived(() => {
-  const param = $page.url.searchParams.get('categories');
+
+
+
+
+
+
+
+
+
+
+const ITEMS_PER_PAGE = 6;
+
+let collectionSlug = $derived.by(() => page.params.slug);
+
+// Fetch all possible facet values for the collection (unfiltered)
+
+let currentFacetValueIds = $derived.by(() => {
+  const param = page.url.searchParams.get('categories');
   return param ? param.split(',').filter(Boolean) : [];
 });
 
-let urlPage = $derived(() => {
-  const param = $page.url.searchParams.get('page');
+let urlPage = $derived.by(() => {
+  const param = page.url.searchParams.get('page');
   const n = param ? parseInt(param, 10) : 1;
   return isNaN(n) ? 1 : n;
 });
@@ -90,9 +111,9 @@ const SORT_OPTIONS = [
   { value: 'name-desc', label: 'Name: Z-A' },
 ];
 
-let sortOrder = $derived(() => $page.url.searchParams.get('sort') || 'newest');
+let sortOrder = $derived.by(() => page.url.searchParams.get('sort') || 'newest');
 
-let collection = $state<Collection|null>(data?.collection ?? null);
+let collection = $derived<Collection|null>(data?.collection ?? null);
 
 async function loadCollection(slug: string, facetIds: string[], pageNum: number = 1, sort: string = 'newest') {
   isLoading = true;
@@ -134,7 +155,7 @@ async function loadCollection(slug: string, facetIds: string[], pageNum: number 
 
 // Only update currentPage on navigation, don't fetch on SSR hydration
 $effect(() => {
-  const pageNum = urlPage();
+  const pageNum = urlPage;
   currentPage = pageNum;
 });
 
@@ -151,10 +172,10 @@ function facetChange(facetId, valueId) {
   goto(url.pathname + url.search, { replaceState: true, noScroll: true });
 
   // Only call loadCollection on client filter change
-  const slug = collectionSlug();
+  const slug = collectionSlug;
   const facetIds = ids;
   const pageNum = 1;
-  const sort = sortOrder();
+  const sort = sortOrder;
   loadCollection(slug, facetIds, pageNum, sort);
 }
 
@@ -164,9 +185,9 @@ function goToPage(pageNum: number) {
   goto(url.pathname + url.search, { replaceState: true, noScroll: true });
 
   // Client-side pagination: fetch new data
-  const slug = collectionSlug();
-  const facetIds = currentFacetValueIds();
-  const sort = sortOrder();
+  const slug = collectionSlug;
+  const facetIds = currentFacetValueIds;
+  const sort = sortOrder;
   loadCollection(slug, facetIds, pageNum, sort);
 }
 
@@ -177,8 +198,8 @@ function onSortChange(e) {
   goto(url.pathname + url.search, { replaceState: true, noScroll: true });
 
   // Client-side sort: fetch new data
-  const slug = collectionSlug();
-  const facetIds = currentFacetValueIds();
+  const slug = collectionSlug;
+  const facetIds = currentFacetValueIds;
   const pageNum = 1;
   const sort = e.target.value;
   loadCollection(slug, facetIds, pageNum, sort);
@@ -204,9 +225,9 @@ function onSortChange(e) {
     <!-- Sidebar -->
     <aside class="hidden lg:block">
       <div class="bg-white rounded shadow p-4">
-        <FilterSidebar {facets} currentFacetValueIds={currentFacetValueIds()} facetChange={facetChange} onReset={() => {
+        <FilterSidebar {facets} currentFacetValueIds={currentFacetValueIds} facetChange={facetChange} onReset={() => {
   // Reset all filters
-  const allIds = currentFacetValueIds();
+  const allIds = currentFacetValueIds;
   allIds.forEach(id => facetChange(undefined, id));
 }} />
       </div>
@@ -219,8 +240,8 @@ function onSortChange(e) {
             <h2 class="text-lg font-semibold">Filters</h2>
             <button class="text-gray-500 text-2xl" onclick={() => showMobileFilters = false} aria-label="Close">&times;</button>
           </div>
-          <FilterSidebar {facets} currentFacetValueIds={currentFacetValueIds()} facetChange={(facetId, valueId) => { facetChange(facetId, valueId); showMobileFilters = false; }} onReset={() => {
-  const allIds = currentFacetValueIds();
+          <FilterSidebar {facets} currentFacetValueIds={currentFacetValueIds} facetChange={(facetId, valueId) => { facetChange(facetId, valueId); showMobileFilters = false; }} onReset={() => {
+  const allIds = currentFacetValueIds;
   allIds.forEach(id => facetChange(undefined, id));
 }} />
         </div>
@@ -233,9 +254,9 @@ function onSortChange(e) {
         <!-- Sort dropdown -->
         <div style="z-index:0;" class="flex justify-end items-center mb-4 lg:sticky lg:top-0 lg:bg-white lg:z-30 lg:py-2 lg:shadow-sm">
           <label for="sort" class="mr-2 text-sm text-gray-600">Sort by:</label>
-          <select id="sort" class="border rounded px-2 py-1 text-sm" value={sortOrder()} onchange={onSortChange}>
+          <select id="sort" class="border rounded px-2 py-1 text-sm" value={sortOrder} onchange={onSortChange}>
             {#each SORT_OPTIONS as opt}
-              <option value={opt.value} selected={sortOrder() === opt.value}>{opt.label}</option>
+              <option value={opt.value} selected={sortOrder === opt.value}>{opt.label}</option>
             {/each}
           </select>
         </div>

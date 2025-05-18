@@ -9,10 +9,16 @@ import fetch from 'cross-fetch';
 
 async function vendureGraphQL({ query, variables, cookies, isMutation = false }: { query: string; variables?: any; cookies: any; isMutation?: boolean }) {
   // Use SvelteKit's cookies API!
-  const token = cookies.get('vendure-auth-token');
+  const session = cookies.get('session');
+  const sessionSig = cookies.get('session.sig');
+  let cookieHeader = [
+    session ? `session=${session}` : '',
+    sessionSig ? `session.sig=${sessionSig}` : ''
+  ].filter(Boolean).join('; ');
+
   // Defensive: If no cookies, don't send header at all
-  const headers = token ? { Authorization: `Bearer ${token}` } : {};
-  console.log('Vendure token>>>>:', token, query, variables, cookies);
+  const headers = cookieHeader ? { Cookie: cookieHeader } : {};
+
   const httpLink = new HttpLink({
     uri: VENDURE_API_URL,
     fetch,
@@ -30,7 +36,7 @@ async function vendureGraphQL({ query, variables, cookies, isMutation = false }:
   // Apollo throws on error by default, so wrap in try/catch if you want graceful handling
   let data;
   try {
-    if (isMutation) { 
+    if (isMutation) {
       data = await client.mutate({
         mutation: gqlQuery,
         variables
@@ -43,7 +49,7 @@ async function vendureGraphQL({ query, variables, cookies, isMutation = false }:
     }
   } catch (err) {
     // Return Apollo errors in GraphQL-style for SvelteKit response
-    data = { errors: err };
+    data = { errors: [err.message] };
   }
 
   return data;
@@ -91,7 +97,12 @@ async function vendureGraphQL({ query, variables, cookies, isMutation = false }:
 
 
 export async function POST({ request, cookies, locals }) {
- 
+  console.log('Received request: INSIDE SHOP REQUEST');
+  console.log('Incoming request headers:', Object.fromEntries(request.headers));
+  console.log('Incoming cookies:', {
+    session: cookies.get('session'),
+    sessionSig: cookies.get('session.sig')
+  });
   try {
     const { query, variables, isMutation = false } = await request.json();
     if (!query) {
@@ -99,7 +110,7 @@ export async function POST({ request, cookies, locals }) {
     }
     const protectedOps = /activeCustomer|orderHistory|updateCustomer|setCustomer|changePassword|createPaymentMethod|deleteCustomer|deleteAddress|updateAddress/i;
     const isProtected = protectedOps.test(query);
-    if (isProtected && (!cookies.get('vendure-auth-token'))) {
+    if (isProtected && (!cookies.get('session') || !cookies.get('session.sig'))) {
       return json({ error: 'Not authenticated' }, { status: 401 });
     }
     const response = await vendureGraphQL({ query, variables, cookies, isMutation });

@@ -165,18 +165,102 @@
       toast.error('Invalid JSON');
     }
   }
+
+
+
+
+
+
+  const url = 'https://vendure-backend-xvqg.onrender.com/admin-api?languageCode=en';  // Use the correct API path (shop-api or admin-api)
+
+const query = `mutation AttemptLogin($username: String!, $password: String!, $rememberMe: Boolean!) {
+  login(username: $username, password: $password, rememberMe: $rememberMe) {
+    ...CurrentUser
+    ...ErrorResult
+    __typename
+  }
+}
+
+fragment CurrentUser on CurrentUser {
+  id
+  identifier
+  channels {
+    id
+    code
+    token
+    permissions
+    __typename
+  }
+  __typename
+}
+
+fragment ErrorResult on ErrorResult {
+  errorCode
+  message
+  __typename
+}
+`;
+
+const variables2 = {
+    "username": "superadmin",
+    "password": "adminaadi",
+    "rememberMe": false
+}
+
+
+async function login() {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      // Add authorization headers if needed, for login usually not needed
+    },
+    body: JSON.stringify({
+      operationName: 'AttemptLogin',
+      query,
+      variables: variables2
+    }),
+  });
+
+  const result = await response.json();
+  console.log(result);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 </script>
 
 <div class="p-6">
   <h1 class="text-2xl font-bold mb-4">API Test Page</h1>
-  
   <div class="mb-4">
+    <button 
+      class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+      onclick={login}
+    >
+     RUN
+    </button>
+  
+  <!-- <div class="mb-4">
     <button 
       class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
       onclick={toggleQueryMode}
     >
       {queryMode.mode === 'apollo' ? 'Switch to Normal Mode' : 'Switch to Apollo Mode'}
-    </button>
+    </button> -->
   </div>
 
   <div class="space-y-4">

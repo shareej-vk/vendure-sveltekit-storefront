@@ -44,6 +44,7 @@ export async function getProductsByCollection(
         description
         slug
         featuredAsset { preview }
+        
       }
     }
   `;

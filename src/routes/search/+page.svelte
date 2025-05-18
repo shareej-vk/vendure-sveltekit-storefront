@@ -19,11 +19,11 @@ let { data } = $props();
 let quickViewProduct = $state<Product | null>(null);
 let loading = $state(false);
 let error = $state(data.error ?? '');
-let results = $state<Product[]>(data.results ?? []);
-let totalItems = $state(data.totalItems ?? 0);
-let facets = $state(data.filteredFacets ?? []);
-let currentPage = $state(data.page ?? 1);
+let results = $derived<Product[]>(data.results ?? []);
+let totalItems = $derived(data.totalItems ?? 0);
+let currentPage = $derived(data.page ?? 1);
 let pageSize = data.pageSize ?? 12;
+
 
 // Facet store setup (robust merge logic)
 const facetStore = createFacetStore();
@@ -46,7 +46,7 @@ function handleAddToCart(product: Product) {
 import { getWishlistStore } from '$lib/stores/wishlistStore.svelte';
 const wishlist = getWishlistStore();
 function handleWishlist(product: Product) {
-  toggleWishlist(product, wishlist);
+  toggleWishlist(product.productId, wishlist);
 }
 function handleQuickView(product: Product) {
   quickViewProduct = product;

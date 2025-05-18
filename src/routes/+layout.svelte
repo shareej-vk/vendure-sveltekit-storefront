@@ -13,6 +13,8 @@
   import { onMount } from 'svelte';
   import { createAppUiStore } from '$lib/stores/appUiStore.svelte';
   import { createFacetStore } from '$lib/stores/facetStore.svelte';
+  import { page, navigating } from '$app/state';
+  import Loader from '$lib/components/Loader.svelte';
   const userStore = createUserStore();
   const appUiStore = createAppUiStore();
   let { data, children } = $props();
@@ -63,5 +65,8 @@
 <CartAddedToast />
 
 <CartSidebar />
+{#if navigating.to}
+<Loader/>
+{/if}
 {@render children()}
 <Footer />

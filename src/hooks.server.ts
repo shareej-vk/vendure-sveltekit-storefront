@@ -1,7 +1,31 @@
-import { redirect, type Handle, type HandleServerError } from '@sveltejs/kit';
+import { redirect, type Handle, type HandleServerError, type HandleFetch } from '@sveltejs/kit';
 import { VENDURE_API_URL } from '$env/static/private';
 
-async function getCurrentUser(token: string, signature: string) {
+declare global {
+  namespace App {
+    interface Locals {
+      user?: {
+        id: string;
+        title: string;
+        firstName: string;
+        lastName: string;
+        emailAddress: string;
+        phoneNumber: string;
+        user: {
+          id: string;
+          identifier: string;
+          verified: boolean;
+          roles: {
+            code: string;
+            description: string;
+            permissions: string[];
+          }[];
+        };
+      } | null;
+    }
+  }
+}
+async function getCurrentUser(token: string) {
   const query = `
     query {
       activeCustomer {
@@ -30,7 +54,7 @@ async function getCurrentUser(token: string, signature: string) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Cookie': `session=${token}; session.sig=${signature}`
+        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({ query })
     });
@@ -46,40 +70,30 @@ async function getCurrentUser(token: string, signature: string) {
   }
 }
 
-export const handle: Handle = async ({ event, resolve }) => {
-  const token = event.cookies.get('session');
-  const signature = event.cookies.get('session.sig');
-
-  // Add user to locals if authenticated
-  if (token && signature) {
+export const handle: Handle = async ({ event, resolve }) => { 
+  const token = event.cookies.get('vendure-auth-token');
+  if (token) {
     try {
-      const user = await getCurrentUser(token, signature);
+      const user = await getCurrentUser(token);
       if (user) {
         event.locals.user = user;
-       
-      } 
+      }
+      else{
+        event.locals.user = null;
+      }
     } catch (error) {
-      console.error('Error in auth hook:', error);      
+      console.error('Failed to validate user:', error);
+      event.locals.user = null;
     }
   }
 
-  // Handle protected routes
-  const protectedRoutes = ['/account', '/checkout'];
-  const isProtectedRoute = protectedRoutes.some(route =>
-    event.url.pathname.startsWith(route)
-  );
-  if (isProtectedRoute && !event.locals.user) {
-    throw redirect(303, `/login?redirect=${event.url.pathname}`);
+  // Redirect to login if user is not authenticated and route is not login or register
+  const protectedRoutes = ['/login', '/register'];
+  if (!event.locals.user && !protectedRoutes.some(route => event.url.pathname.includes(route))) {
+    throw redirect(302, '/login');
   }
 
   const response = await resolve(event);
   return response;
 };
 
-export const handleError: HandleServerError = ({ error, event }) => {
-  console.error('Server error:', error);
-  return {
-    message: 'An unexpected error occurred',
-    code: (error as any)?.code ?? 'UNKNOWN_ERROR'
-  };
-};

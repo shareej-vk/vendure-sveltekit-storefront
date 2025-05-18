@@ -5,6 +5,7 @@ export interface RegisterInput {
   emailAddress: string;
   password: string;
 }
+import { PUBLIC_VENDURE_API_URL } from '$env/static/public';
 
 export async function registerCustomer(input: RegisterInput): Promise<{ success: boolean; message?: string; errors?: any }> {
   const query = `mutation RegisterCustomerAccount($input: RegisterCustomerInput!) {
@@ -31,7 +32,7 @@ export async function registerCustomer(input: RegisterInput): Promise<{ success:
     }
   }`;
 
-  const response = await fetch('http://localhost:3000/shop-api', {
+  const response = await fetch(PUBLIC_VENDURE_API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query, variables: { input } })

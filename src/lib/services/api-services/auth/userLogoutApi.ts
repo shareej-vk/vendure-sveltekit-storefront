@@ -2,24 +2,20 @@
 import { PUBLIC_VENDURE_API_URL } from '$env/static/public';
 
 export async function logoutCustomer(): Promise<{ success: boolean; message?: string }> {
-  const mutation = `mutation { logout { success } }`;
   try {
-    const res = await fetch(PUBLIC_VENDURE_API_URL, {
+    const res = await fetch('/api/auth/logout', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      body: JSON.stringify({ query: mutation }),
+      body: JSON.stringify({}),
       credentials: 'include'
     });
     
     const result = await res.json();
-    
-    if (result?.data?.logout?.success === true) {
-      return { success: true, message: 'Logout successful' };
-    }
-    return { success: false, message: 'Logout failed' };
+    console.log('Logout result:', result);   
+    return { success: true, message: 'Logout successful' };
   } catch (e) {
     return { success: false, message: 'Logout failed' };
   }

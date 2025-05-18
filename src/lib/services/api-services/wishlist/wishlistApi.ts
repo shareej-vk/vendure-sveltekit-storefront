@@ -2,8 +2,7 @@ import { vendureApiClient } from '$lib/services/api-services/vendureApiClient';
 
 // Get the wishlist for the active customer
 export async function getActiveCustomerWishlist(fetchFn?: typeof fetch) {
-  const query = `
-    query GetActiveCustomerWishlist {
+  const query = `query GetActiveCustomerWishlist {
       activeCustomer {
         id
         customFields {

@@ -9,9 +9,9 @@ import { toggleWishlist } from '$lib/effects/wishlistEffects';
 
 const wishlist = getWishlistStore();
 let { data } = $props();
-let product = $state(data.product);
-let error = $state(data.error);
-let loading = $state(data.loading);
+let product = $derived(data.product);
+let error = $derived(data.error);
+let loading = $derived(data.loading);
 const userStore = getUserStore();
 let addCartSuccess = $state(false);
 const cart = getCartStore();

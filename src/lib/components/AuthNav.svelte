@@ -20,12 +20,11 @@ async function handleLogout() {
   isDropdownOpen = false;
   try {
     const vendureLogout = await logoutCustomer();
+    console.log('Logout result:', vendureLogout);
     if (vendureLogout.success) {
       window.location.href = '/';
     }
-    else{
-      alert('Logout failed. Please try again.');
-    }
+
      
   } catch (e) {
    // window.location.href = '/';

@@ -1,6 +1,6 @@
 <script lang="ts">
 let { } = $props();
-let email = $state('vkshey@gmail.com');
+let email = $state('rahul@yopmail.com');
 let password = $state('adminaadi');
 let loading = $state(false);
 let error = $state('');
@@ -49,8 +49,8 @@ async function login(event: Event) {
     <button type="submit" class="w-full py-3 rounded-full bg-green-600 text-white font-semibold shadow hover:bg-green-700 transition cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed" disabled={loading}>
       {loading ? 'Signing in...' : 'Login'}
     </button>
-    <div class="text-center text-gray-500 text-sm mt-2">
+    <!-- <div class="text-center text-gray-500 text-sm mt-2">
       Don't have an account? <a href="/register" class="text-amber-700 hover:underline">Register</a>
-    </div>
+    </div> -->
   </form>
 </section>
